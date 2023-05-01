@@ -1,7 +1,11 @@
 const express = require("express");
+const bodyParser = require("body-parser");
 const database = require("./database");
 
 const booky = express();
+
+booky.use(bodyParser.urlencoded({extended: true}))
+booky.use(bodyParser.json());
 
 //to get all books
 booky.get("/",(req,res)=>{
@@ -84,6 +88,100 @@ booky.get("/publications/book/:isbn",(req,res)=>{
     }
     res.json({author: getSpecificPublication});
 })
+
+
+//POST
+// to post a new book
+booky.post("/book/new",(req,res)=>{
+    const newBook = req.body;
+    database.books.push(newBook);
+        return res.json({updatedBooks: database.books});
+})
+
+//to add a new author
+booky.post("/author/new",(req,res)=>{
+    const newAuthor = req.body;
+    database.author.push(newAuthor);
+    return res.json({updatedAuthors: database.author})
+})
+
+//to add a new publication
+booky.post("/publication/new",(req,res)=>{
+    const newPublication = req.body;
+    database.publication.push(newPublication);
+    return res.json({updatedAuthors: database.publication})
+})
+
+
+//PUT
+//to update details of book and with related publication details 
+booky.put("/publication/update/book/:isbn", (req,res) =>{
+    database.publication.forEach((pub)=>{
+        if(pub.id === req.body.pubId){
+            return pub.books.push(req.params.isbn)
+        }
+    });
+    database.books.forEach((book)=>{
+        if(book.ISBN === req.params.isbn){
+            book.publications = req.body.pubId;
+            return;
+        }
+    });
+    return res.json(
+        {
+            books : database.books,
+            publications : database.publication,
+            message: "succesfully updated publication"
+        }
+    )
+})
+
+//DELETE
+//to delete a book 
+booky.delete("/book/delete/:isbn",(req,res)=>{
+    const updatedBookDatabase = database.books.filter((book)=> book.ISBN ===req.params.isbn)
+    database.books = updatedBookDatabase;
+
+    return res.json({books: database.books})
+});
+
+
+//delete author from book 
+booky.delete("/book/delete/author/:isbn",(req,res)=>{
+
+    database.books.forEach((book)=>{
+        if(book.ISBN === req.params.isbn){
+            book.author.pop();
+        }
+     });
+
+     return res.json({book : database.books})
+})
+
+//delete author from book and book from author
+booky.delete("/book/delete/author/:isbn/:authorId",(req,res)=>{
+    //to delete given author from book
+    database.books.forEach((book)=>{
+        if(book.ISBN === req.params.isbn){
+            const newAuthorList = book.author.filter((eachAuthor)=> eachAuthor !== parseInt(req.params.authorId))    
+            book.author = newAuthorList;
+        }
+        return
+         
+    })
+    //to delete book from author
+    database.author.forEach((eachAuthor)=>{
+        if(eachAuthor.id === parseInt(req.params.authorId)){
+            const newBookList = eachAuthor.books.filter((book)=>book !== req.params.isbn );
+            eachAuthor.books = newBookList;
+        }
+        return
+    })
+
+
+    return res.json({book : database.books,author: database.author});
+})
+
 
 
 booky.listen(3000,()=>{

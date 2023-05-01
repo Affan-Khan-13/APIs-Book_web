@@ -8,6 +8,16 @@ const books = [
         author: [1,2],
         publications: [1],
         category: ["tech","space","education"]
+    },
+    {
+    ISBN : 'secretBook',
+    title : 'Tesla!!!',
+    pubData: "2021-08-05",
+    language: "en",
+    numPage: 350,
+    author: [2],
+    publications: [1],
+    category: ["tech","space","education"]
     }
 ]
 
@@ -29,6 +39,11 @@ const publication = [
         id: 1,
         name: "writex",
         books : ["12345Book"]
+    },
+    {
+        id: 2,
+        name: "writex2",
+        books : []
     }
 ]
 

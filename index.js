@@ -78,12 +78,17 @@ booky.get("/authors/:name",async(req,res)=>{
 })
 
 //to get authors based on book
-booky.get("/authors/book/:isbn",(req,res)=>{
-    const getSpecificAuthor = database.author.filter((author)=>author.books.includes(req.params.isbn));
-    if(getSpecificAuthor.length === 0){
+booky.get("/authors/book/:isbn",async(req,res)=>{
+    //const getSpecificAuthor = database.author.filter((author)=>author.books.includes(req.params.isbn));
+    const getSpecificAuthor = await AuthorModel.findOne({
+        books: req.params.isbn
+    })
+    if(!getSpecificAuthor){
         res.json({error: `${req.params.isbn} is not a valid book`})
     }
+    else{
     res.json({author: getSpecificAuthor});
+    }
 })
 
 //to get all publications
@@ -103,12 +108,16 @@ booky.get("/publications/:name",async(req,res)=>{
 })
 
 // to get a publication based on book
-booky.get("/publications/book/:isbn",(req,res)=>{
-    const getSpecificPublication = database.publication.filter((publication)=>publication.books.includes(req.params.isbn));
-    if(getSpecificPublication.length === 0){
+booky.get("/publications/book/:isbn",async(req,res)=>{
+    const getSpecificPublication = await PublicationModel.findOne({
+        books: req.params.isbn
+    })
+    if(!getSpecificPublication){
         res.json({error: `${req.params.isbn} is not a registered book under any publication`})
     }
-    res.json({author: getSpecificPublication});
+    else{
+    res.json({publication: getSpecificPublication});
+    }
 })
 
 
@@ -137,9 +146,20 @@ booky.post("/publication/new",async(req,res)=>{
 
 
 //PUT
-//to update details of book and with related publication details 
-booky.put("/publication/update/book/:isbn", (req,res) =>{
-    database.publication.forEach((pub)=>{
+//to update title of the book using id  
+booky.put("/update/book/:isbn", async(req,res) =>{
+    const updatedBook = await BookModel.findOneAndUpdate(
+        {
+            ISBN: req.params.isbn
+        },
+        {
+            title: req.body.bookTitle
+        },
+        {
+            new: true
+        }
+    )
+    /* database.publication.forEach((pub)=>{
         if(pub.id === req.body.pubId){
             return pub.books.push(req.params.isbn)
         }
@@ -149,23 +169,61 @@ booky.put("/publication/update/book/:isbn", (req,res) =>{
             book.publications = req.body.pubId;
             return;
         }
-    });
+    });*/
+
     return res.json(
         {
-            books : database.books,
-            publications : database.publication,
-            message: "succesfully updated publication"
+            books : updatedBook,
+            message: "succesfully updated book"
         }
     )
 })
 
+//to update author of the book in book and author database
+booky.put("/book/author/update/:isbn",async(req,res)=>{
+    //update book databse
+    const updatedBook = await BookModel.findOneAndUpdate(
+        {
+            ISBN: req.params.isbn
+        },
+        {
+            $addToSet:{
+                author: req.body.newAuthor
+            }
+        },
+        {
+            new: true
+        }
+    );
+
+    //update author datbase
+    const updatedAuthor = await AuthorModel.findOneAndUpdate(
+        {
+            id: req.body.newAuthor
+        },
+        {
+            $addToSet:{
+                books: req.params.isbn
+            }
+        },
+        {
+            new : true
+        }
+    )
+    res.json({books: updatedBook, authors: updatedAuthor, message: "updated succesfully"})
+
+
+})
+
 //DELETE
 //to delete a book 
-booky.delete("/book/delete/:isbn",(req,res)=>{
-    const updatedBookDatabase = database.books.filter((book)=> book.ISBN ===req.params.isbn)
-    database.books = updatedBookDatabase;
-
-    return res.json({books: database.books})
+booky.delete("/book/delete/:isbn",async(req,res)=>{
+    const updatedBookDatabase = await BookModel.findOneAndDelete(
+        {
+            ISBN: req.params.isbn
+        }
+    )
+    return res.json({books: updatedBookDatabase})
 });
 
 
@@ -182,28 +240,43 @@ booky.delete("/book/delete/author/:isbn",(req,res)=>{
 })
 
 //delete author from book and book from author
-booky.delete("/book/delete/author/:isbn/:authorId",(req,res)=>{
+booky.delete("/book/delete/author/:isbn/:authorId",async(req,res)=>{
     //to delete given author from book
-    database.books.forEach((book)=>{
-        if(book.ISBN === req.params.isbn){
-            const newAuthorList = book.author.filter((eachAuthor)=> eachAuthor !== parseInt(req.params.authorId))    
-            book.author = newAuthorList;
+    const deleteAuthor = await BookModel.findOneAndUpdate(
+        {
+            ISBN: req.params.isbn
+        },
+        {
+            $pull:{
+                author: req.params.authorId
+            }
+        },
+        {
+            new: true
         }
-        return
+    )
          
-    })
+    
     //to delete book from author
-    database.author.forEach((eachAuthor)=>{
-        if(eachAuthor.id === parseInt(req.params.authorId)){
-            const newBookList = eachAuthor.books.filter((book)=>book !== req.params.isbn );
-            eachAuthor.books = newBookList;
+    const deleteBook = await AuthorModel.findOneAndUpdate(
+        {
+            id: req.params.authorId
+        },
+        {
+            $pull:{
+                books: req.params.isbn
+            }
+        },
+        {
+            new: true
         }
-        return
+    )
+    
+    return res.json({book : deleteAuthor,author: deleteBook});
     })
 
 
-    return res.json({book : database.books,author: database.author});
-})
+
 
 
 

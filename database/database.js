@@ -1,13 +1,13 @@
 const books = [
     {
         ISBN : '12345Book',
-        title : 'Tesla!!!',
-        pubData: "2021-08-05",
+        title : 'dodo!!!',
+        pubData: "2021-08-07",
         language: "en",
-        numPage: 350,
+        numPage: 300,
         author: [1,2],
         publications: [1],
-        category: ["tech","space","education"]
+        category: ["suspense","space","fiction"]
     },
     {
     ISBN : 'secretBook',

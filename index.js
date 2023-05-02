@@ -1,21 +1,39 @@
 const express = require("express");
 const bodyParser = require("body-parser");
-const database = require("./database");
+const dotenv = require("dotenv")
+const mongoose = require("mongoose");
+
+const database = require("./database/database");
+
+const BookModel = require("./database/book");
+const AuthorModel = require("./database/author");
+const PublicationModel = require("./database/publication");
 
 const booky = express();
 
 booky.use(bodyParser.urlencoded({extended: true}))
 booky.use(bodyParser.json());
 
+dotenv.config()
+mongoose.connect(process.env.MONGO_URL,
+    { useNewUrlParser: true,
+        useUnifiedTopology: true,
+        }
+).then(()=>console.log("connection has been established"));
+
+
 //to get all books
-booky.get("/",(req,res)=>{
-    return res.json({books : database.books})
+booky.get("/",async(req,res)=>{
+    const getAllBooks = await BookModel.find()
+
+    return res.json(getAllBooks)
 });
 
 //to get a specific book
-booky.get("/is/:isbn",(req,res)=>{
-    const getSpecificBook = database.books.filter((book)=>book.ISBN === req.params.isbn);
-    if(getSpecificBook.length <= 0){
+booky.get("/is/:isbn",async(req,res)=>{
+    const getSpecificBook = await BookModel.findOne({ISBN: req.params.isbn})
+
+    if(!getSpecificBook){
         return res.json({error : `No book found for the isbn of ${req.params.isbn}`})
     }
     return res.json({books : getSpecificBook})
@@ -23,9 +41,9 @@ booky.get("/is/:isbn",(req,res)=>{
 });
 
 //to get books based on category
-booky.get("/c/:category",(req,res)=>{
-    const getSpecificBook = database.books.filter((book)=>book.category.includes(req.params.category));
-    if(getSpecificBook.length === 0){
+booky.get("/c/:category",async(req,res)=>{
+    const getSpecificBook = await BookModel.findOne({category: req.params.category})
+    if(!getSpecificBook){
         return res.json({error : `No book found for the category of ${req.params.category}`})
     }
     return res.json({books : getSpecificBook})
@@ -33,9 +51,9 @@ booky.get("/c/:category",(req,res)=>{
 });
 
 //to get books based on language
-booky.get("/l/:language",(req,res)=>{
-    const getSpecificBook = database.books.filter((book)=>book.language.includes(req.params.language));
-    if(getSpecificBook.length === 0){
+booky.get("/l/:language",async(req,res)=>{
+    const getSpecificBook = await BookModel.findOne({language: req.params.language})
+    if(!getSpecificBook){
         return res.json({error : `No book found for the language of ${req.params.language}`})
     }
     return res.json({books : getSpecificBook})
@@ -43,18 +61,20 @@ booky.get("/l/:language",(req,res)=>{
 });
 
 //to get all authors
-booky.get("/authors",(req,res)=>{
+booky.get("/authors",async(req,res)=>{
     const authors = database.author;
-    res.json({author:authors})
+    const getAllAuthors = await AuthorModel.find()
+    res.json(getAllAuthors)
 })
 
 //to get a specific author
-booky.get("/authors/:author",(req,res)=>{
-    const authors = database.author.filter((author)=>author.name === req.params.author);
-    if(authors.length === 0){
-        res.json({error : `author ${req.params.author} not found `})
+booky.get("/authors/:name",async(req,res)=>{
+    //const authors = database.author.filter((author)=>author.name === req.params.name);
+    const getSepecificAuthor = await AuthorModel.findOne({name: req.params.name})
+    if(!getSepecificAuthor){
+        res.json({error : `author ${req.params.name} not found `})
     }
-    res.json({author:authors})
+    else{res.json(getSepecificAuthor)}
 })
 
 //to get authors based on book
@@ -67,17 +87,19 @@ booky.get("/authors/book/:isbn",(req,res)=>{
 })
 
 //to get all publications
-booky.get("/publications",(req,res)=>{
-    res.json({publications : database.publication})
+booky.get("/publications",async (req,res)=>{
+    const getAllPublications = await PublicationModel.find()
+    res.json(getAllPublications)
 })
 
 //to get a specific publication
-booky.get("/publications/:name",(req,res)=>{
-    const getSpecificPublication = database.publication.filter((publication)=>publication.name === (req.params.name));
-    if(getSpecificPublication.length === 0){
+booky.get("/publications/:name",async(req,res)=>{
+    const getSpecificPublication =await PublicationModel.findOne({name: req.params.name}) 
+    if(!getSpecificPublication){
         res.json({error: `${req.params.name} is not a registered publication`})
     }
-    res.json({author: getSpecificPublication});
+    else{res.json(getSpecificPublication);}
+    
 })
 
 // to get a publication based on book
@@ -92,24 +114,25 @@ booky.get("/publications/book/:isbn",(req,res)=>{
 
 //POST
 // to post a new book
-booky.post("/book/new",(req,res)=>{
-    const newBook = req.body;
-    database.books.push(newBook);
-        return res.json({updatedBooks: database.books});
+booky.post("/book/new",async (req,res)=>{
+    const {newBook} = req.body;
+    const addNewBook = await BookModel.create(newBook);
+    return res.json({books: addNewBook, message:"book added successfully"})
+ 
 })
 
 //to add a new author
-booky.post("/author/new",(req,res)=>{
-    const newAuthor = req.body;
-    database.author.push(newAuthor);
-    return res.json({updatedAuthors: database.author})
+booky.post("/author/new",async(req,res)=>{
+    const {newAuthor} = req.body;
+    const addNewAuthor = await AuthorModel.create(newAuthor)
+    return res.json({author: addNewAuthor})
 })
 
 //to add a new publication
-booky.post("/publication/new",(req,res)=>{
-    const newPublication = req.body;
-    database.publication.push(newPublication);
-    return res.json({updatedAuthors: database.publication})
+booky.post("/publication/new",async(req,res)=>{
+    const {newPublication} = req.body;
+    const addnewPublication = await PublicationModel.create(newPublication);
+    return res.json({publication : addnewPublication})
 })
 
 
